@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water Meter</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    body { max-width: 960px; margin: 0 auto; padding: 1rem; }
+    .usage-positive { color: var(--pico-color-green-500); }
+    .net-cost { font-weight: bold; }
+    .delete-btn { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+    canvas { max-height: 300px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Water Meter</h1>
+
+    <!-- Settings -->
+    <article>
+      <header><strong>Settings</strong></header>
+      <div class="grid">
+        <form method="POST" action="/config/price">
+          <label>
+            Water price (PLN/m³)
+            <input type="number" name="price_per_m3" step="0.01" min="0"
+              value="{{printf "%.2f" .PricePerM3}}" required>
+          </label>
+          <button type="submit">Update</button>
+        </form>
+        <form method="POST" action="/config/internet">
+          <label>
+            Internet contribution (PLN/month)
+            <input type="number" name="internet_contribution" step="0.01" min="0"
+              value="{{printf "%.2f" .InternetContribution}}" required>
+          </label>
+          <button type="submit">Update</button>
+        </form>
+      </div>
+    </article>
+
+    <!-- Add reading form -->
+    <article>
+      <header><strong>Add Reading</strong></header>
+      <form method="POST" action="/readings">
+        <div class="grid">
+          <label>
+            Date
+            <input type="date" name="read_at" required value="{{.Today}}">
+          </label>
+          <label>
+            Meter value (m³)
+            <input type="number" name="value_m3" step="0.001" min="0" placeholder="e.g. 1234.567" required>
+          </label>
+        </div>
+        <label>
+          Notes (optional)
+          <input type="text" name="notes" placeholder="e.g. after vacation">
+        </label>
+        <button type="submit">Save reading</button>
+      </form>
+    </article>
+
+    {{if .Entries}}
+    <!-- Chart -->
+    <article>
+      <header><strong>Usage &amp; cost over time</strong></header>
+      <canvas id="usageChart"></canvas>
+    </article>
+
+    <!-- History table -->
+    <article>
+      <header><strong>History</strong></header>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Meter (m³)</th>
+              <th>Usage (m³)</th>
+              <th>Price (PLN/m³)</th>
+              <th>Gross (PLN)</th>
+              <th>Internet (PLN)</th>
+              <th>Net (PLN)</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range .Entries}}
+            <tr>
+              <td>{{.ReadAt.Format "2006-01-02"}}</td>
+              <td>{{printf "%.3f" .ValueM3}}</td>
+              <td>
+                {{if .UsageM3}}
+                  <span class="usage-positive">{{printf "%.3f" (deref .UsageM3)}}</span>
+                {{else}}
+                  —
+                {{end}}
+              </td>
+              <td>{{printf "%.2f" .PricePerM3}}</td>
+              <td>
+                {{if .GrossCost}}{{printf "%.2f" (deref .GrossCost)}}{{else}}—{{end}}
+              </td>
+              <td>
+                {{if .NetCost}}- {{printf "%.2f" $.InternetContribution}}{{else}}—{{end}}
+              </td>
+              <td class="net-cost">
+                {{if .NetCost}}{{printf "%.2f" (deref .NetCost)}}{{else}}—{{end}}
+              </td>
+              <td>{{.Notes}}</td>
+              <td>
+                <form method="POST" action="/readings/{{.ID}}/delete" style="margin:0">
+                  <button class="delete-btn secondary outline" type="submit"
+                    onclick="return confirm('Delete this reading?')">✕</button>
+                </form>
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+    </article>
+    {{else}}
+    <p>No readings yet. Add your first one above.</p>
+    {{end}}
+  </main>
+
+  {{if .Entries}}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script>
+    const labels = [{{range .Entries}}{{if .UsageM3}}"{{.ReadAt.Format "Jan 2006"}}",{{end}}{{end}}];
+    const usage  = [{{range .Entries}}{{if .UsageM3}}{{printf "%.3f" (deref .UsageM3)}},{{end}}{{end}}];
+    const gross  = [{{range .Entries}}{{if .GrossCost}}{{printf "%.2f" (deref .GrossCost)}},{{end}}{{end}}];
+    const net    = [{{range .Entries}}{{if .NetCost}}{{printf "%.2f" (deref .NetCost)}},{{end}}{{end}}];
+
+    new Chart(document.getElementById('usageChart'), {
+      type: 'bar',
+      data: {
+        labels: labels.reverse(),
+        datasets: [
+          {
+            label: 'Usage (m³)',
+            data: usage.reverse(),
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            yAxisID: 'y',
+          },
+          {
+            label: 'Gross cost (PLN)',
+            data: gross.reverse(),
+            type: 'line',
+            borderColor: 'rgba(255, 159, 64, 0.8)',
+            backgroundColor: 'transparent',
+            borderDash: [4, 4],
+            yAxisID: 'y2',
+          },
+          {
+            label: 'Net cost (PLN)',
+            data: net.reverse(),
+            type: 'line',
+            borderColor: 'rgba(255, 99, 132, 0.9)',
+            backgroundColor: 'transparent',
+            yAxisID: 'y2',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          y:  { type: 'linear', position: 'left',  title: { display: true, text: 'm³' } },
+          y2: { type: 'linear', position: 'right', title: { display: true, text: 'PLN' }, grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+  </script>
+  {{end}}
+</body>
+</html>

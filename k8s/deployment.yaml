@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: water-meter-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: water-meter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: water-meter
+  template:
+    metadata:
+      labels:
+        app: water-meter
+    spec:
+      containers:
+        - name: water-meter
+          image: docker.io/phlawski/water-meter:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_PATH
+              value: /data/water-meter.db
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: water-meter-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: water-meter
+spec:
+  selector:
+    app: water-meter
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: LoadBalancer

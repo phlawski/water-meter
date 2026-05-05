@@ -1,0 +1,19 @@
+# Binary
+water-meter
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Go
+vendor/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
