@@ -66,6 +66,14 @@ spec:
   type: ClusterIP
 ---
 apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: water-meter-auth
+spec:
+  basicAuth:
+    secret: water-meter-basicauth
+---
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: water-meter
@@ -75,6 +83,8 @@ spec:
   routes:
     - match: PathPrefix(`/`)
       kind: Rule
+      middlewares:
+        - name: water-meter-auth
       services:
         - name: water-meter
           port: 80
