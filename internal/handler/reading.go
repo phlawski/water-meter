@@ -93,6 +93,11 @@ func (h *Handler) CreateReading(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	adjustmentPLN, err := strconv.ParseFloat(r.FormValue("adjustment_pln"), 64)
+	if err != nil {
+		adjustmentPLN = 0
+	}
+
 	pricePerM3, err := h.getConfigFloat(ctx, configKeyPrice)
 	if err != nil {
 		http.Error(w, "db error", http.StatusInternalServerError)
@@ -101,10 +106,11 @@ func (h *Handler) CreateReading(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = h.q.InsertReading(ctx, db.InsertReadingParams{
-		ReadAt:     readAt,
-		ValueM3:    valueM3,
-		PricePerM3: pricePerM3,
-		Notes:      r.FormValue("notes"),
+		ReadAt:        readAt,
+		ValueM3:       valueM3,
+		PricePerM3:    pricePerM3,
+		Notes:         r.FormValue("notes"),
+		AdjustmentPLN: adjustmentPLN,
 	})
 	if err != nil {
 		http.Error(w, "db error", http.StatusInternalServerError)

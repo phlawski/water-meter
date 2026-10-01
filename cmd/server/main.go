@@ -55,16 +55,48 @@ func main() {
 func migrate(conn *sql.DB) error {
 	_, err := conn.Exec(`
 		CREATE TABLE IF NOT EXISTS readings (
-			id           INTEGER PRIMARY KEY AUTOINCREMENT,
-			read_at      DATE    NOT NULL,
-			value_m3     REAL    NOT NULL,
-			price_per_m3 REAL    NOT NULL,
-			notes        TEXT    NOT NULL DEFAULT ''
+			id              INTEGER PRIMARY KEY AUTOINCREMENT,
+			read_at         DATE    NOT NULL,
+			value_m3        REAL    NOT NULL,
+			price_per_m3    REAL    NOT NULL,
+			notes           TEXT    NOT NULL DEFAULT '',
+			adjustment_pln  REAL    NOT NULL DEFAULT 0
 		);
 		CREATE TABLE IF NOT EXISTS config (
 			key   TEXT PRIMARY KEY,
 			value TEXT NOT NULL
 		);
 	`)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// add adjustment_pln to existing DBs that predate this column
+	rows, err := conn.Query(`PRAGMA table_info(readings)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	hasAdjustment := false
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull int
+		var dfltValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "adjustment_pln" {
+			hasAdjustment = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if !hasAdjustment {
+		_, err = conn.Exec(`ALTER TABLE readings ADD COLUMN adjustment_pln REAL NOT NULL DEFAULT 0`)
+		return err
+	}
+	return nil
 }

@@ -58,6 +58,10 @@
           Notes (optional)
           <input type="text" name="notes" placeholder="e.g. after vacation">
         </label>
+        <label>
+          Adjustment (PLN, optional)
+          <input type="number" name="adjustment_pln" step="0.01" placeholder="e.g. +25 or -50" value="0">
+        </label>
         <button type="submit">Save reading</button>
       </form>
     </article>
@@ -83,6 +87,8 @@
               <th>Gross (PLN)</th>
               <th>Internet (PLN)</th>
               <th>Net (PLN)</th>
+              <th>Adj (PLN)</th>
+              <th>To Pay (PLN)</th>
               <th>Notes</th>
               <th></th>
             </tr>
@@ -108,6 +114,12 @@
               </td>
               <td class="net-cost">
                 {{if .NetCost}}{{printf "%.2f" (deref .NetCost)}}{{else}}—{{end}}
+              </td>
+              <td>
+                {{if .ToPay}}{{if ne .AdjustmentPLN 0.0}}{{printf "%+.2f" .AdjustmentPLN}}{{else}}—{{end}}{{else}}—{{end}}
+              </td>
+              <td class="net-cost">
+                {{if .ToPay}}{{printf "%.2f" (deref .ToPay)}}{{else}}—{{end}}
               </td>
               <td>{{.Notes}}</td>
               <td>

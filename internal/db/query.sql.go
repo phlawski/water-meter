@@ -31,7 +31,7 @@ func (q *Queries) GetConfigValue(ctx context.Context, key string) (string, error
 }
 
 const getReading = `-- name: GetReading :one
-SELECT id, read_at, value_m3, price_per_m3, notes
+SELECT id, read_at, value_m3, price_per_m3, notes, adjustment_pln
 FROM readings
 WHERE id = ?
 `
@@ -45,21 +45,23 @@ func (q *Queries) GetReading(ctx context.Context, id int64) (Reading, error) {
 		&i.ValueM3,
 		&i.PricePerM3,
 		&i.Notes,
+		&i.AdjustmentPLN,
 	)
 	return i, err
 }
 
 const insertReading = `-- name: InsertReading :one
-INSERT INTO readings (read_at, value_m3, price_per_m3, notes)
-VALUES (?, ?, ?, ?)
-RETURNING id, read_at, value_m3, price_per_m3, notes
+INSERT INTO readings (read_at, value_m3, price_per_m3, notes, adjustment_pln)
+VALUES (?, ?, ?, ?, ?)
+RETURNING id, read_at, value_m3, price_per_m3, notes, adjustment_pln
 `
 
 type InsertReadingParams struct {
-	ReadAt     time.Time
-	ValueM3    float64
-	PricePerM3 float64
-	Notes      string
+	ReadAt        time.Time
+	ValueM3       float64
+	PricePerM3    float64
+	Notes         string
+	AdjustmentPLN float64
 }
 
 func (q *Queries) InsertReading(ctx context.Context, arg InsertReadingParams) (Reading, error) {
@@ -68,6 +70,7 @@ func (q *Queries) InsertReading(ctx context.Context, arg InsertReadingParams) (R
 		arg.ValueM3,
 		arg.PricePerM3,
 		arg.Notes,
+		arg.AdjustmentPLN,
 	)
 	var i Reading
 	err := row.Scan(
@@ -76,12 +79,13 @@ func (q *Queries) InsertReading(ctx context.Context, arg InsertReadingParams) (R
 		&i.ValueM3,
 		&i.PricePerM3,
 		&i.Notes,
+		&i.AdjustmentPLN,
 	)
 	return i, err
 }
 
 const listReadings = `-- name: ListReadings :many
-SELECT id, read_at, value_m3, price_per_m3, notes
+SELECT id, read_at, value_m3, price_per_m3, notes, adjustment_pln
 FROM readings
 ORDER BY read_at DESC
 `
@@ -101,6 +105,7 @@ func (q *Queries) ListReadings(ctx context.Context) ([]Reading, error) {
 			&i.ValueM3,
 			&i.PricePerM3,
 			&i.Notes,
+			&i.AdjustmentPLN,
 		); err != nil {
 			return nil, err
 		}

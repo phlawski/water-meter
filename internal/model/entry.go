@@ -8,14 +8,16 @@ import (
 
 // Entry enriches a raw Reading with computed usage and cost.
 type Entry struct {
-	ID         int64
-	ReadAt     time.Time
-	ValueM3    float64
-	PricePerM3 float64
-	Notes      string
-	UsageM3    *float64 // nil for the oldest reading (no previous to diff against)
-	GrossCost  *float64 // water cost only
-	NetCost    *float64 // water cost minus internet contribution
+	ID            int64
+	ReadAt        time.Time
+	ValueM3       float64
+	PricePerM3    float64
+	Notes         string
+	AdjustmentPLN float64
+	UsageM3       *float64 // nil for the oldest reading (no previous to diff against)
+	GrossCost     *float64 // water cost only
+	NetCost       *float64 // water cost minus internet contribution
+	ToPay         *float64 // NetCost + AdjustmentPLN
 }
 
 // BuildEntries takes readings ordered newest-first (as returned by ListReadings)
@@ -25,20 +27,23 @@ func BuildEntries(rows []db.Reading, internetContribution float64) []Entry {
 	entries := make([]Entry, len(rows))
 	for i, r := range rows {
 		e := Entry{
-			ID:         r.ID,
-			ReadAt:     r.ReadAt,
-			ValueM3:    r.ValueM3,
-			PricePerM3: r.PricePerM3,
-			Notes:      r.Notes,
+			ID:            r.ID,
+			ReadAt:        r.ReadAt,
+			ValueM3:       r.ValueM3,
+			PricePerM3:    r.PricePerM3,
+			Notes:         r.Notes,
+			AdjustmentPLN: r.AdjustmentPLN,
 		}
 		// rows[i] is newer, rows[i+1] is older
 		if i+1 < len(rows) {
 			usage := r.ValueM3 - rows[i+1].ValueM3
 			gross := usage * r.PricePerM3
 			net := gross - internetContribution
+			toPay := net + r.AdjustmentPLN
 			e.UsageM3 = &usage
 			e.GrossCost = &gross
 			e.NetCost = &net
+			e.ToPay = &toPay
 		}
 		entries[i] = e
 	}

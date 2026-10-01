@@ -1,9 +1,10 @@
 CREATE TABLE IF NOT EXISTS readings (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    read_at      DATE    NOT NULL,
-    value_m3     REAL    NOT NULL,
-    price_per_m3 REAL    NOT NULL,
-    notes        TEXT    NOT NULL DEFAULT ''
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    read_at         DATE    NOT NULL,
+    value_m3        REAL    NOT NULL,
+    price_per_m3    REAL    NOT NULL,
+    notes           TEXT    NOT NULL DEFAULT '',
+    adjustment_pln  REAL    NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS config (

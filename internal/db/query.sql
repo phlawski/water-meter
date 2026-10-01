@@ -1,18 +1,18 @@
 -- name: ListReadings :many
-SELECT id, read_at, value_m3, price_per_m3, notes
+SELECT id, read_at, value_m3, price_per_m3, notes, adjustment_pln
 FROM readings
 ORDER BY read_at DESC;
 
 -- name: InsertReading :one
-INSERT INTO readings (read_at, value_m3, price_per_m3, notes)
-VALUES (?, ?, ?, ?)
-RETURNING id, read_at, value_m3, price_per_m3, notes;
+INSERT INTO readings (read_at, value_m3, price_per_m3, notes, adjustment_pln)
+VALUES (?, ?, ?, ?, ?)
+RETURNING id, read_at, value_m3, price_per_m3, notes, adjustment_pln;
 
 -- name: DeleteReading :exec
 DELETE FROM readings WHERE id = ?;
 
 -- name: GetReading :one
-SELECT id, read_at, value_m3, price_per_m3, notes
+SELECT id, read_at, value_m3, price_per_m3, notes, adjustment_pln
 FROM readings
 WHERE id = ?;
 

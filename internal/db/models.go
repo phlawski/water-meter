@@ -14,9 +14,10 @@ type Config struct {
 }
 
 type Reading struct {
-	ID         int64
-	ReadAt     time.Time
-	ValueM3    float64
-	PricePerM3 float64
-	Notes      string
+	ID             int64
+	ReadAt         time.Time
+	ValueM3        float64
+	PricePerM3     float64
+	Notes          string
+	AdjustmentPLN  float64
 }
